@@ -60,4 +60,5 @@ Temporary Items
 
 # End of https://mrkandreev.name/snippets/gitignore-generator/#C++,macOS
 
-cpp/build/*
+build/*
+inputs/*
