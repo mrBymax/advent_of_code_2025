@@ -1,17 +1,26 @@
 #include "shared/io.hpp"
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <vector>
 
-void part1(const std::vector<std::string> &lines) {
-  std::vector<std::pair<long long, long long>> fresh_ranges;
-  std::vector<long long> to_check;
+using Interval = std::pair<long long, long long>;
 
+struct Input {
+  std::vector<Interval> ranges;
+  std::vector<long long> ids;
+};
+
+Input parse_input(const std::vector<std::string> &lines) {
+  Input data;
   std::istringstream iss;
 
   for (const auto &line : lines) {
     if (line.empty())
       continue;
+
+    // We can safely assume that ranges are positive, so the only
+    // thing we need to check is if the line contains a dash
     if (line.find('-') != std::string::npos) {
       iss.clear();
       iss.str(line);
@@ -19,31 +28,48 @@ void part1(const std::vector<std::string> &lines) {
       long long start, end;
       char dash;
       if (iss >> start >> dash >> end) {
-        fresh_ranges.push_back({start, end});
+        data.ranges.push_back({start, end});
       }
-    }
-
-    else
-      to_check.push_back(std::stol(line));
+    } else
+      data.ids.push_back(std::stol(line));
   }
 
-  // process the ranges
-  std::sort(fresh_ranges.begin(), fresh_ranges.end());
-  std::vector<std::pair<long long, long long>> merged_ranges;
-  for (auto &[start, end] : fresh_ranges) {
-    if (merged_ranges.empty() || merged_ranges.back().second < start - 1) {
-      merged_ranges.push_back({start, end});
+  return data;
+}
+
+std::vector<Interval> merge_intervals(std::vector<Interval> ranges) {
+  if (ranges.empty())
+    return {};
+
+  std::sort(ranges.begin(), ranges.end());
+  std::vector<Interval> merged;
+
+  for (size_t i = 0; i < ranges.size(); i++) {
+    auto &cur = merged.back();
+    const auto &next = ranges[i];
+    if (merged.empty() || cur.second < next.first - 1) {
+      merged.push_back(next);
     } else {
-      merged_ranges.back().second = std::max(merged_ranges.back().second, end);
+      cur.second = std::max(cur.second, next.second);
     }
   }
 
+  return merged;
+}
+
+void part1(const Input &data) {
+  auto merged = merge_intervals(data.ranges);
   int ans = 0;
-  for (auto &id : to_check) {
-    for (auto &[start, end] : merged_ranges) {
-      if (id >= start && id <= end) {
+
+  for (const auto &[start, end] : data.ranges) {
+    // Binary search for the fist id that starts after the query
+    auto it = std::upper_bound(
+        merged.begin(), merged.end(), start,
+        [](long long val, const Interval &range) { return val < range.first; });
+    if (it != merged.begin()) {
+      auto prev = *std::prev(it);
+      if (start <= prev.second) {
         ans++;
-        break;
       }
     }
   }
@@ -51,40 +77,11 @@ void part1(const std::vector<std::string> &lines) {
   std::cout << ans << std::endl;
 }
 
-void part2(const std::vector<std::string> &lines) {
-  std::vector<std::pair<long long, long long>> fresh_ranges;
-
-  std::istringstream iss;
-
-  for (const auto &line : lines) {
-    if (line.empty())
-      continue;
-    if (line.find('-') != std::string::npos) {
-      iss.clear();
-      iss.str(line);
-
-      long long start, end;
-      char dash;
-      if (iss >> start >> dash >> end) {
-        fresh_ranges.push_back({start, end});
-      }
-    }
-  }
-
-  // process the ranges
-  std::sort(fresh_ranges.begin(), fresh_ranges.end());
-  std::vector<std::pair<long long, long long>> merged_ranges;
-  for (auto &[start, end] : fresh_ranges) {
-    if (merged_ranges.empty() || merged_ranges.back().second < start - 1) {
-      merged_ranges.push_back({start, end});
-    } else {
-      merged_ranges.back().second = std::max(merged_ranges.back().second, end);
-    }
-  }
-
+void part2(const Input &data) {
+  auto merged = merge_intervals(data.ranges);
   long long ans = 0;
 
-  for (auto &[start, end] : merged_ranges) {
+  for (auto &[start, end] : merged) {
     ans += end - start + 1;
   }
 
@@ -93,9 +90,10 @@ void part2(const std::vector<std::string> &lines) {
 
 int main() {
   auto lines = aoc::io::read_lines();
+  auto data = parse_input(lines);
 
-  // part1(lines);
-  part2(lines);
+  part1(data);
+  part2(data);
 
   return 0;
 }
@@ -138,6 +136,3 @@ int main() {
  * TC: O(n log n) -> sorting the ranges takes O(n log n) time.
  * SC: O(n) -> we need to store the fresh ranges and the IDs to check.
  */
-
- // TODO: Refactor this in a more professional way. DRY and refactored to separate concerns. Use a struct to represent the input
- // and extract the parsing logic from the main "solver" function. same thing with merge_intervals;
