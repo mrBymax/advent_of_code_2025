@@ -124,7 +124,7 @@ int main() {
  of checks.
  * A bruteforce approach would be to check each ID against each range.
  *
- * TC: O(n * m) -> we have to test n values against m ranges.
+ * TC: O(n) -> we use binary search to find the first range that contains the ID.
  * SC: O(n) -> we need to store the fresh ranges and the IDs to check.
  *
  * A first improvement could be to sort the ranges and merge them if they
